@@ -83,7 +83,7 @@ def mensaje_api_view(request):
                         m = menu_tipo_bien(accion_str, opcionSeleccionada, registro)
                         message = m['message'] 
                 else:
-                    message = men['message']
+                    message = men['message'] 
             elif opcion1 == '0':    #  Tipo de bien
                 #  Enviar el menú tipo de bien
                 men = menu_tipo_bien(accion_str, opcionSeleccionada, registro)
