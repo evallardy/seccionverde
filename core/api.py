@@ -36,7 +36,7 @@ def mensaje_api_view(request):
 
         numero = datos['number']
         message_in = datos['message-in']
-        message_in_raw = datos['mensaje-in-raw']
+        message_in_raw = datos['message-in-raw']
         application = datos['application']
         tipo = datos['type']
         unique_id = datos['unique-id']
