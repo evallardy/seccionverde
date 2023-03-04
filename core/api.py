@@ -7,64 +7,44 @@ import json
 
 @api_view(['POST','GET','PULL','PUT','PATCH','DELETE'])
 def mensaje_api_view(request):
+    # Guardado de la información que llega tanto el meodo como la información
     prueba = Prueba(descripcion = "pruebas " + request.method)
     prueba.save()
-    respuesta = [{
-        "message-out": "Test Instant Reply Back",
-        "delay": "0",
-    }]
-    
-    return Response(respuesta)
-#    return Response(json.dumps(respuesta))
+    prueba = Prueba(descripcion = json.dumps(request.data)[0:254])
+    prueba.save()
+# OK     respuesta = [{
+# OK        "message-out": "Test Instant Reply Back",
+# OK        "delay": "0",
+# OK    }]
+# OK    
+# OK    return Response(respuesta)
 
+# {
+#     "number":"987654",
+#     "message-in":"Hola,&buenos&días",
+#     "mensaje-in-raw":"Hola, buenos días",
+#     "application":"2",
+#     "type":"1",
+#     "unique-id":"3fsdwet5747",
+#     "quoted":"WEQWVDDVWEReqrwer",
+# }
+ 
 
-    if request.method == 'POST':
-        # Guardado de la información que llega
+    if request.method == 'POST' and request.data:
+
         datos = request.data
-        datos_str = json.dumps(datos)[0:254]
-        prueba = Prueba(descripcion = datos_str)
-        prueba.save()
-        
-        
-        respuesta = {"message-out":"Prueba","delay":"0"}
-        
-        
-        
-        return Response(json_encoded(respuesta))
 
-        
-        
-        
-        # Recepción del mensaje
- #       {
- #           "token":"123456789",
- #           "number":"987654",
- #           "message-in":"Hola,&buenos&días",
- #           "mensaje-in-raw":"Hola, buenos días",
- #           "application":"2",
- #           "type":"1",
- #           "unique_id":"3fsdwet5747",
- #           "quoted":"WEQWVDDVWEReqrwer"
- #       }
-        
-        
-#        token = datos['token']
-        token = "123"
         numero = datos['number']
         message_in = datos['message-in']
+        message_in_raw = datos['mensaje-in-raw']
         application = datos['application']
         tipo = datos['type']
         unique_id = datos['unique-id']
         quoted = datos['quoted']
-        project_id = datos['project-id']
-        name = datos['name']
         opcion_seleccionada = message_in
 
-        respuesta = [{"number":numero,"application":application,"message":message_in,"type":tipo, "message-out":"Prueba","delay":"0"}]
-        
-        return Response(respuesta)
-
-
+#        respuesta = [{"number":numero,"application":application,"message":message_in,"type":tipo, "message-out":"Prueba","delay":"0"}]
+#        return Response(respuesta)
         
         # Busca comunicacion
         comunicacion = MensajePicky.objects.filter(number=numero,estatus_mensaje=1).last()
@@ -167,7 +147,6 @@ def mensaje_api_view(request):
             for m in menu:
                 message += m.opcion + " " + m.descripcion + "\n"
             comunicacion = MensajePicky(
-                token = token,
                 number = numero,
                 message_in = message_in,
                 message_in_raw = message_in_raw,
@@ -187,12 +166,6 @@ def mensaje_api_view(request):
         respuesta = [{}]
 
         return Response(respuesta)
-
-#class MensajeAPIView(APIView):
-#   def get(self, request):
-#        mensajes = Mensaje.objects.all()
-#        mensajes_serializer = MensajeSerializer(mensajes, many = True)
-#        return Response(mensajes_serializer.data)
 
 def is_integer(n):
     try:
