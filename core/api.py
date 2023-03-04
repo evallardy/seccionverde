@@ -36,11 +36,11 @@ def mensaje_api_view(request):
 
         numero = datos['number']
         message_in = datos['message-in']
-        message_in_raw = datos['message_in_raw']
+        message_in_raw = datos['message-in-raw']
         application = datos['application']
         tipo = datos['type']
         unique_id = datos['unique-id']
-        quoted = datos['quoted']
+        quoted = "datos prueba"
         opcion_seleccionada = message_in
 
 #        respuesta = [{"number":numero,"application":application,"message":message_in,"type":tipo, "message-out":"Prueba","delay":"0"}]
