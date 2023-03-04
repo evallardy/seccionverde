@@ -186,7 +186,7 @@ def is_integer(n):
 def menu_tipo_accion(opcionSeleccionada, registro):
     obj_accion = {}
     menu = Menu.objects.filter(seleccion=0)
-    obj_accion['message_accion'] = "Selecciona lo que gustes realizar\n"
+    obj_accion['message_accion'] = "<h1>Selecciona lo que gustes realizar</h1>\n"
     obj_accion['encontro'] = 0
     obj_accion['opcion0'] = ""
     obj_accion['accion_str'] = ""
