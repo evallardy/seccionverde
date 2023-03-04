@@ -158,7 +158,7 @@ def mensaje_api_view(request):
             )
             comunicacion.save()
 
-        respuesta = [{"number":numero,"application":application,"message":message,"type":tipo, "message-out":"Prueba","delay":"0"}]
+        respuesta = {"number":numero,"application":application,"message":message,"type":tipo, "message-out":"Prueba","delay":"0"}
     
         prueba = Prueba(descripcion = json.dumps(respuesta)[0:254])
         
@@ -167,7 +167,7 @@ def mensaje_api_view(request):
         return Response(respuesta)
     else:
 
-        respuesta = [{}]
+        respuesta = {}
         
         prueba = Prueba(descripcion = "Sin respuesta")
         
