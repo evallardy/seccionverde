@@ -166,7 +166,7 @@ def generaJson(comunicacion, nivel):
         bienN = opcionSeleccionada(comunicacion, 5)
         bien = Bien.objects.filter(id=bienN).first()
         titulo = 'Los datos de ' + tipo + ' que seleccionaste para ' + accion + ', en el municipio ' + municipio + ' del estado ' + estado + '\n\n'
-        titulo += 'Esta en la colonia ' + bien.colonia
+        titulo += 'Esta en la colonia ' + bien.colonia + "\n\n"
         opciones = {}
         opciones['R'] = 'Regresar'
         opciones['X'] = 'Terminar'
