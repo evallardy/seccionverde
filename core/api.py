@@ -2,291 +2,246 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.decorators import api_view
 from .models import *
+from .serializers import *
 from django.http import JsonResponse
 import json
 
 @api_view(['POST','GET','PULL','PUT','PATCH','DELETE'])
 def mensaje_api_view(request):
     # Guardado de la información que llega tanto el meodo como la información
-    prueba = Prueba(descripcion = "pruebas " + request.method)
-    prueba.save()
     prueba = Prueba(descripcion = json.dumps(request.data)[0:254])
     prueba.save()
-# OK     respuesta = [{
-# OK        "message-out": "Test Instant Reply Back",
-# OK        "delay": "0",
-# OK    }]
-# OK    
-# OK    return Response(respuesta)
-
-# {
-#     "number":"987654",
-#     "message-in":"Hola,&buenos&días",
-#     "mensaje-in-raw":"Hola, buenos días",
-#     "application":"2",
-#     "type":"1",
-#     "unique-id":"3fsdwet5747",
-#     "quoted":"WEQWVDDVWEReqrwer",
-# }
- 
 
     if request.method == 'POST' and request.data:
-
         datos = request.data
-
-        numero = datos['number']
-        message_in = datos['message-in']
-        message_in_raw = datos['message_in_raw']
-        application = datos['application']
-        tipo = datos['type']
-        unique_id = datos['unique-id']
-        quoted = "datos prueba"
-        opcion_seleccionada = message_in
-
-#        respuesta = [{"number":numero,"application":application,"message":message_in,"type":tipo, "message-out":"Prueba","delay":"0"}]
-#        return Response(respuesta)
-        
-        # Busca comunicacion
-        comunicacion = MensajePicky.objects.filter(number=numero,estatus_mensaje=1).last()
-        message = ""
-        if comunicacion:
-            registro = comunicacion.id
-            if is_integer(opcion_seleccionada):
-                opcionSeleccionada = int(opcion_seleccionada,0)
+        if datos['number'] and datos['message-in'] and datos['message_in_raw'] \
+            and datos['application'] and datos['type']:
+            numero = datos['number']
+            message_in = datos['message-in']
+            message_in_raw = datos['message_in_raw']
+            application = datos['application']
+            tipo = datos['type']
+            opcion_seleccionada = message_in_raw
+            # Busca comunicacion
+            comunicacion = MensajePicky.objects.filter(number=numero,estatus_mensaje=1).last()
+            message = ""
+            respuesta = ""
+            if comunicacion:
+                # quitar espacion en la cadena del mensaje
+                opcion_sel = opcion_seleccionada.upper().replace(" ", "")
+                nivel = comunicacion.nivel
+                pk = comunicacion.id
+                if buscaOpcion(comunicacion, opcion_sel):
+                    if opcion_sel == 'R':
+                        # Envia menu anteriror
+                        sig_comunicacion = MensajePicky.objects.filter(id=pk).update(nivel=nivel-1)
+                        menu_json = traeJson(comunicacion, nivel-1)
+                        message = creaMenu(json.dumps(menu_json))
+                    elif opcion_sel == 'X':
+                        sig_comunicacion = MensajePicky.objects.filter(id=pk).update(estatus_mensaje=0)
+                        message = "Gracias por su preferencia, lo esperamos muy pronto \n\n"
+                    else:
+                        menu_json = traeJson(comunicacion, nivel)
+                        menu_json['seleccion'] = opcion_sel
+                        menu_json1 = generaJson(comunicacion, nivel + 1)
+                        if nivel == 1:
+                            upd_comunicacion = MensajePicky.objects.filter(id=pk).update(opcion1=menu_json, opcion2=menu_json1, nivel=nivel+1)
+                        elif nivel == 2:
+                            upd_comunicacion = MensajePicky.objects.filter(id=pk).update(opcion2=menu_json, opcion3=menu_json1, nivel=nivel+1)
+                        elif nivel == 3:
+                            upd_comunicacion = MensajePicky.objects.filter(id=pk).update(opcion3=menu_json, opcion4=menu_json1, nivel=nivel+1)
+                        elif nivel == 4:
+                            upd_comunicacion = MensajePicky.objects.filter(id=pk).update(opcion4=menu_json, opcion5=menu_json1, nivel=nivel+1)
+                        elif nivel == 5:
+                            upd_comunicacion = MensajePicky.objects.filter(id=pk).update(nivel=nivel+1)
+                        message = creaMenu(json.dumps(menu_json1))
+                else:
+                    # Envia nuevamente el mismo menu
+                    menu_json = traeJson(comunicacion, nivel)
+                    message = creaMenu(json.dumps(menu_json))
             else:
-                opcionSeleccionada = 0  
-            # opcion tipo de acción Compra , Renta
-            opcion0 = comunicacion.opcion0
-            accion_str = TIPO_ACCION[int(opcion0,0)][1]
-            # opcion tipo de bien Casa, Departamento, Local comercial, Terreno 
-            opcion1 = comunicacion.opcion1
-            tipo_bien_str = TIPO_BIEN[int(opcion1,0)][1]
-            # opción estado 
-            opcion2 = comunicacion.opcion2
-            opcion2_texto = comunicacion.opcion2_texto
-            estado_str = ESTADOS[int(opcion2,0)][1]
-            # opcion municipio
-            opcion3 = comunicacion.opcion3
-            opcion3_texto = comunicacion.opcion3_texto
-            municipio_str = opcion3_texto
-            if opcion0 == '0':    #    Tipo de accción
-                #  Enviar el menú acción
-                men = menu_tipo_accion(opcionSeleccionada,registro)
-                if men['encontro'] == 1:
-                    if opcion_seleccionada == "3":
-                        message = "Hasta la vista"
-                        conversacion_terminada = MensajePicky.objects.filter(id=registro).update(estatus_mensaje=0)
-                    else:
-                        #  Enviar el menú de tipo de bien
-                        opcionSeleccionada = 0
-                        accion_str = TIPO_ACCION[men['opcion0']][1]
-                        m = menu_tipo_bien(accion_str, opcionSeleccionada, registro)
-                        message = m['message'] 
-                else:
-                    message = men['message'] 
-            elif opcion1 == '0':    #  Tipo de bien
-                #  Enviar el menú tipo de bien
-                men = menu_tipo_bien(accion_str, opcionSeleccionada, registro)
-                if men['encontro'] == 1:
-                    tipo_bien_str = TIPO_BIEN[men['opcion1']][1]
-                    if opcion_seleccionada == "3":
-                        message = "Hasta la vista"
-                        conversacion_terminada = MensajePicky.objects.filter(id=registro).update(estatus_mensaje=0)
-                    else:
-                        #  Enviar Los estados
-                        opcion1 = opcionSeleccionada
-                        opcionSeleccionada = 0
-                        men_edo = menu_estado(opcion0, opcion1, opcionSeleccionada, registro)
-                        if men_edo['contador'] == 1:
-                            menu_mun = menu_municipio(opcion0, opcion1, men_edo['opcion2'], men_edo['opcion2_texto'], opcionSeleccionada, registro)
-                            if menu_mun['contador'] == 1:
-                                message = "Seleccionó " + accion_str + "," + tipo_bien_str + "," + men_edo['opcion2_texto'] + "," + menu_mun['opcion3_texto']    
-                            else:
-                                message = men_edo['message'] + "\n" + menu_mun['message']
-                        else:
-                            message = men_edo['message'] 
-                else:
-                    message = men['message']
-            elif opcion2 == '0':     # Estados
-                #  Enviar los estados
-                men_estado = menu_estado(opcion0, opcion1, opcionSeleccionada, registro)
-                if men_estado['encontro'] == 1 or men_estado['contador'] == 1:
-                    if opcion_seleccionada == "3":
-                        message = "Hasta la vista"
-                        conversacion_terminada = MensajePicky.objects.filter(id=registro).update(estatus_mensaje=0)
-                    else:
-                        #  Enviar los municipios
-                        opcion2 = opcionSeleccionada
-                        opcion2_texto = men_estado['opcion2_texto']
-                        opcionSeleccionada = 0
-                        menu_mun = menu_municipio(opcion0, opcion1, opcion2, opcion2_texto, opcionSeleccionada, registro)
-                        message = men_estado['message'] + menu_mun['message']
-                else:
-                    message = men_estado['message']
-            elif opcion3 == '0':     # Municipios
-                #  Enviar los Municipios
-                menu_mun = menu_municipio(opcion0, opcion1, opcion2, opcion2_texto, opcionSeleccionada, registro)
-                if menu_mun['encontro'] == 1 or menu_mun['contador'] == 1:
-                    if opcion_seleccionada == "3":
-                        message = "Hasta la vista"
-                        conversacion_terminada = MensajePicky.objects.filter(id=registro).update(estatus_mensaje=0)
-                    else:
-                        #  Enviar la seleccioón y el envio al asesor
-                        opcion3 = opcionSeleccionada
-                        opcion3_texto = menu_mun['opcion3_texto']
-                        opcionSeleccionada = 0
-                        message = "Seleccionó " + accion_str + "," + tipo_bien_str + "," + opcion2_texto + "," + menu_mun['opcion3_texto']
-                else:
-                    message = menu_mun['message']
-            else:
-                message = "Seleccionó " + accion_str + "," + tipo_bien_str + "," + opcion2_texto + "," + opcion3_texto
+                #  Crea el menu primer nivel
+                menu_json = generaJson(None, 1)
+                message = creaMenu(json.dumps(menu_json))
+                
+                # Guarda la peticion la primera vez con su primer menu
+                comunicacion = MensajePicky(
+                    number = numero,
+                    message_in = message_in,
+                    message_in_raw = message_in_raw,
+                    application = application,
+                    tipo = tipo,
+                    nivel=1,
+                    opcion1 = menu_json,
+                )
+                comunicacion.save()
+            # Se envia repuesta 
+            respuesta = {"number":numero,"application":application,"message":message,"type":tipo, "message-out":message,"delay":"0"}
+            return Response(respuesta)
         else:
-            #  Enviar el menú principal 0 inicia conversación
-            message = "Bienvenido a servicio atención personalizada \n"
-            menu = Menu.objects.filter(seleccion=0)
-            for m in menu:
-                message += m.opcion + " " + m.descripcion + "\n"
-            comunicacion = MensajePicky(
-                number = numero,
-                message_in = message_in,
-                message_in_raw = message_in_raw,
-                message = message,
-                application = application,
-                tipo = tipo,
-                unique_id = unique_id,
-                quoted = quoted,
-            )
-            comunicacion.save()
-
-        respuesta = {"number":numero,"application":application,"message":message,"type":tipo, "message-out":message,"delay":"0"}
-    
-        prueba = Prueba(descripcion = json.dumps(respuesta)[0:254])
-        
-        prueba.save()
-
+            # Se envia el mensaje de error, no envian nada
+            if datos['number']:
+                respuesta = mensajeError(datos['number'])
+            else:
+                respuesta = mensajeError("Faltan datos")
+            return Response(respuesta)
+    else:
+        # Se envia el mensaje de error, no envian nada
+        respuesta = mensajeError("Sin número")
         return Response(respuesta)
+                
+def generaJson(comunicacion, nivel):
+    opciones = {}
+    if nivel == 1:
+        titulo = 'Bienvenido a servicio atención personalizada\n\n' + '¿Que le gustaría hacer?\n\n'
+        bienes = Bien.objects.filter(compra_renta=3)
+        if bienes:
+            opciones[1] = TIPO_ACCION[1][1]
+            opciones[2] = TIPO_ACCION[2][1]
+        else:
+            bienes = Bien.objects.filter(compra_renta=1)
+            if bienes:
+                opciones[1] = TIPO_ACCION[1][1]
+            bienes = Bien.objects.filter(compra_renta=2)
+            if bienes:
+                opciones[2] = TIPO_ACCION[2][1]
+        opciones['X'] = 'Terminar'
+    elif nivel == 2:
+        accion = opcionSeleccionadaT(comunicacion, 1)
+        accionN = opcionSeleccionada(comunicacion, 1)
+        titulo = '¿Que deseas ' + accion + '?\n\n'
+        tipos = Bien.objects.filter(compra_renta__in=[accionN,3]).values_list('tipo', flat=True).distinct()
+        for tipo in tipos:
+            opciones[tipo] = TIPO_BIEN[tipo][1]
+        opciones['R'] = 'Regresar'
+        opciones['X'] = 'Terminar'
+    elif nivel == 3:
+        accion = opcionSeleccionadaT(comunicacion, 1)
+        accionN = opcionSeleccionada(comunicacion, 1)
+        tipo = opcionSeleccionadaT(comunicacion, 2)
+        tipoN = opcionSeleccionada(comunicacion, 2)
+        titulo = '¿En que estado quieres ' + accion + ' ' + tipo + '?\n\n'
+        estados = Bien.objects.filter(compra_renta__in=[accionN,3],tipo=tipoN).values_list('estado', flat=True).distinct().order_by('estado')
+        for estado in estados:
+            opciones[estado] = ESTADOS[estado][1]
+        opciones['R'] = 'Regresar'
+        opciones['X'] = 'Terminar'
+    elif nivel == 4:
+        accion = opcionSeleccionadaT(comunicacion, 1)
+        accionN = opcionSeleccionada(comunicacion, 1)
+        tipo = opcionSeleccionadaT(comunicacion, 2)
+        tipoN = opcionSeleccionada(comunicacion, 2)
+        estado = opcionSeleccionadaT(comunicacion, 3)
+        estadoN = opcionSeleccionada(comunicacion, 3)
+        titulo = '¿En que municipio del estado ' + estado + " quieres " + accion + ' ' + tipo + '?\n\n'
+        municipios = Bien.objects.filter(compra_renta__in=[accionN,3],tipo=tipoN, estado=estadoN).values_list('municipio', flat=True).distinct().order_by('municipio')
+        contador = 0
+        for municipio in municipios:
+            contador += 1
+            opciones[contador] = municipio
+        opciones['R'] = 'Regresar'
+        opciones['X'] = 'Terminar'
+    elif nivel == 5:
+        accion = opcionSeleccionadaT(comunicacion, 1)
+        accionN = opcionSeleccionada(comunicacion, 1)
+        tipo = opcionSeleccionadaT(comunicacion, 2)
+        tipoN = opcionSeleccionada(comunicacion, 2)
+        estado = opcionSeleccionadaT(comunicacion, 3)
+        estadoN = opcionSeleccionada(comunicacion, 3)
+        municipio = opcionSeleccionadaT(comunicacion, 4)
+        titulo = '¿Que ' + tipo + ' deseas ' + accion + '?, en el municipio ' + municipio + ' del estado ' + estado + '\n\n'
+        bienes = Bien.objects.filter(compra_renta__in=[accionN,3],tipo=tipoN, estado=estadoN, municipio=municipio).order_by('colonia')
+        for bien in bienes:
+            opciones[bien.id] = bien.colonia
+        opciones['R'] = 'Regresar'
+        opciones['X'] = 'Terminar'
     else:
+        accion = opcionSeleccionadaT(comunicacion, 1)
+        accionN = opcionSeleccionada(comunicacion, 1)
+        tipo = opcionSeleccionadaT(comunicacion, 2)
+        tipoN = opcionSeleccionada(comunicacion, 2)
+        estado = opcionSeleccionadaT(comunicacion, 3)
+        estadoN = opcionSeleccionada(comunicacion, 3)
+        municipio = opcionSeleccionadaT(comunicacion, 4)
+        bienN = opcionSeleccionada(comunicacion, 5)
+        bien = Bien.objects.filter(id=bienN).first()
+        titulo = 'Los datos de ' + tipo + ' que seleccionaste para ' + accion + ', en el municipio ' + municipio + ' del estado ' + estado + '\n\n'
+        titulo += 'Esta en la colonia ' + bien.colonia
+        opciones = {}
+        opciones['R'] = 'Regresar'
+        opciones['X'] = 'Terminar'
+    data = {'titulo': titulo, 'seleccion':0, 'opciones': opciones}
+    return data
 
-        respuesta = {}
-        
-        prueba = Prueba(descripcion = "Sin respuesta")
-        
-        prueba.save()
+def buscaOpcion(comunicacion, opcion_sel):
+    nivel = comunicacion.nivel
+    menu_json = traeJson(comunicacion, nivel)
+    return existeOpcion(menu_json, opcion_sel)
 
-        return Response(respuesta)
+def traeJson(comunicacion, opcion):
+    if opcion == 1:
+        menu_json = comunicacion.opcion1
+    elif opcion == 2:
+        menu_json = comunicacion.opcion2
+    elif opcion == 3:
+        menu_json = comunicacion.opcion3
+    elif opcion == 4:
+        menu_json = comunicacion.opcion4
+    else:
+        menu_json = comunicacion.opcion5
+    return menu_json
 
-def is_integer(n):
-    try:
-        float(n)
-    except ValueError:
-        return False
+def existeOpcion(menu_json, opcion_sel):
+    encontro = False
+    for opcion in menu_json['opciones']:
+        if opcion == opcion_sel:
+            encontro = True
+            break
+    return encontro
+                
+def opcionSeleccionada(comunicacion, opcion):
+    if opcion == 1:
+        menu_json = comunicacion.opcion1
+    elif opcion == 2:
+        menu_json = comunicacion.opcion2
+    elif opcion == 3:
+        menu_json = comunicacion.opcion3
+    elif opcion == 4:
+        menu_json = comunicacion.opcion4
     else:
-        return float(n).is_integer()
-    
-def menu_tipo_accion(opcionSeleccionada, registro):
-    obj_accion = {}
-    menu = Menu.objects.filter(seleccion=0)
-    obj_accion['message_accion'] = "<h1>Selecciona lo que gustes realizar</h1>\n"
-    obj_accion['encontro'] = 0
-    obj_accion['opcion0'] = ""
-    obj_accion['accion_str'] = ""
-    for m in menu:
-        if opcionSeleccionada == int(m.opcion):
-            obj_accion['encontro'] = 1
-        obj_accion['message_accion'] += m.opcion + " " + m.descripcion + "\n"
-    if obj_accion['encontro'] == 1:
-        seleecion_principal = MensajePicky.objects.filter(id=registro).update(opcion0=opcionSeleccionada)
-        obj_accion['opcion0'] = opcionSeleccionada
-        obj_accion['accion_str'] = TIPO_ACCION[opcionSeleccionada][1]
-        obj_accion['message'] = ''
-    else:
-        obj_accion['message'] = obj_accion['message_accion']
-    return obj_accion
+        menu_json = comunicacion.opcion5
+    opcion_sel = menu_json
+    seleccion = opcion_sel['seleccion']
+    return seleccion
 
-def menu_tipo_bien(accion_str, opcionSeleccionada, registro):
-    obj_tipo_bien = {}
-    menu = Menu.objects.filter(seleccion=1)
-    obj_tipo_bien['message_tipo_bien'] = "Selecciona el tipo de bien que deseas " + accion_str + "\n"
-    obj_tipo_bien['encontro'] = 0
-    for m in menu:
-        if opcionSeleccionada == int(m.opcion):
-            obj_tipo_bien['encontro'] = 1
-        obj_tipo_bien['message_tipo_bien'] += m.opcion + " " + m.descripcion + "\n"
-    if obj_tipo_bien['encontro'] == 1:
-        seleecion_tipo_bien = MensajePicky.objects.filter(id=registro).update(opcion1=opcionSeleccionada)
-        obj_tipo_bien['opcion1'] = opcionSeleccionada
-        obj_tipo_bien['tipo_bien_str'] = TIPO_BIEN[opcionSeleccionada][1]
-        obj_tipo_bien['message'] = ''
+def opcionSeleccionadaT(comunicacion, opcion):
+    if opcion == 1:
+        menu_json = comunicacion.opcion1
+    elif opcion == 2:
+        menu_json = comunicacion.opcion2
+    elif opcion == 3:
+        menu_json = comunicacion.opcion3
+    elif opcion == 4:
+        menu_json = comunicacion.opcion4
     else:
-        obj_tipo_bien['message'] = obj_tipo_bien['message_tipo_bien']
-    return obj_tipo_bien
+        menu_json = comunicacion.opcion5
+    opcion_sel = menu_json
+    seleccion = opcion_sel['seleccion']
+    return opcion_sel['opciones'][seleccion]
 
-def menu_estado(opcion0, opcion1, opcionSeleccionada, registro):
-    obj_estado = {}
-    if opcion0 == '1':
-        bien = Bien.objects.filter(compra=1, tipo=opcion1).order_by('estado')
-    else:
-        bien = Bien.objects.filter(renta=1, tipo=opcion1).order_by('estado')
-    obj_estado['estado_anterior'] = ""
-    obj_estado['contador'] = 0
-    obj_estado['encontro'] = 0
-    obj_estado['message_edo'] = "Selecciona el estado de tu preferencias \n"
-    for b in bien:
-        if obj_estado['estado_anterior'] != b.estado:
-            obj_estado['contador'] += 1
-            obj_estado['estado_anterior'] = b.estado
-            obj_estado['num_estado'] = next(t[1] for t in ESTADOS_NUM if t[0] == obj_estado['estado_anterior'])
-            if opcionSeleccionada == obj_estado['num_estado']:
-                obj_estado['encontro'] = 1
-            obj_estado['message_edo'] += obj_estado['num_estado'] + " " + b.estado + "\n"
-    if obj_estado['encontro'] == 1:
-        obj_estado['opcion2'] = obj_estado['num_estado']
-        obj_estado['opcion2_texto'] = obj_estado['estado_anterior']
-        seleccion_estado = MensajePicky.objects.filter(id=registro).update(opcion2=opcionSeleccionada, 
-                                                        opcion2_texto=obj_estado['estado_anterior'])
-        obj_estado['message'] = ""
-    elif obj_estado['contador'] == 1:
-        obj_estado['opcion2'] = obj_estado['num_estado']
-        obj_estado['opcion2_texto'] = obj_estado['estado_anterior']
-        seleccion_estado = MensajePicky.objects.filter(id=registro).update(opcion2=obj_estado['num_estado'], 
-                                                        opcion2_texto=obj_estado['estado_anterior'])
-        obj_estado['message'] = "Tenemos solo en el estado de " + obj_estado['estado_anterior'] + "\n"
-    else:
-        obj_estado['message'] = obj_estado['estado_anterior']
-    return obj_estado
-            
-def menu_municipio(opcion0, opcion1, opcion2, opcion2_texto, opcionSeleccionada, registro):
-    obj_municipio = {}
-    if opcion0 == '1':
-        bien = Bien.objects.filter(compra=1, tipo=opcion1, estado=opcion2_texto).order_by('municipio')
-    else:
-        bien = Bien.objects.filter(renta=1, tipo=opcion1, estado=opcion2_texto).order_by('municipio')
-    obj_municipio['encontro'] = 0
-    obj_municipio['contador'] = 0
-    obj_municipio['municipio_ant'] = ""
-    obj_municipio['message_mpio'] = "Selecciona el municipio de tu preferencias \n"
-    for b in bien:
-        if opcionSeleccionada == b.id:
-            obj_municipio['encontro'] = 1
-            obj_municipio['opcion3'] = b.id
-            obj_municipio['opcion3_texto'] = b.municipio
-        if obj_municipio['municipio_ant'] != b.municipio:
-            obj_municipio['contador'] += 1
-            obj_municipio['municipio_ant'] = b.municipio
-            obj_municipio['num_municipio'] = b.id
-            obj_municipio['opcion3_texto'] = b.municipio
-            obj_municipio['message_mpio'] += str(b.id) + " " + b.municipio + "\n"
-    if obj_municipio['encontro'] == 1:
-        if obj_municipio['contador'] == 1:
-            obj_municipio['message'] = "Solo tenemos en el municipio de \n"+ obj_municipio['message_mpio']
-        obj_municipio['message'] = ""
-        seleccion_municipio = MensajePicky.objects.filter(id=registro).update(opcion3=opcionSeleccionada, 
-                                                    opcion3_texto=obj_municipio['opcion3_texto'])
-    elif obj_municipio['contador'] == 1:
-        obj_municipio['message'] = "Solo tenemos en el municipio de \n"+ obj_municipio['message_mpio']
-        seleccion_municipio = MensajePicky.objects.filter(id=registro).update(opcion3=obj_municipio['num_municipio'], 
-                                                    opcion3_texto=obj_municipio['opcion3_texto'])
-    else:    
-        obj_municipio['message'] = obj_municipio['message_mpio']
-    return obj_municipio
+def creaMenu(objeto):
+    json_data = json.loads(objeto)
+    mensaje = json_data['titulo']
+    if json_data['opciones']:
+        opciones = json_data['opciones']
+        for opcion in opciones:
+            mensaje += opcion + " - " + opciones[opcion] + "\n"
+    return mensaje
+
+def mensajeError(numeroTelefono):
+    mensaje = 'Faltan datos'
+    respuesta = {'Error':mensaje}
+    prueba = Prueba(descripcion = "Celular:" + numeroTelefono + "/" + mensaje)
+    prueba.save()
+    return respuesta
 

@@ -1,44 +1,44 @@
 from django.contrib.auth.mixins import PermissionRequiredMixin
 from django.db import models
 
-ACTIVIDAD = (
+NO_SI = (
     (0, 'No'),
     (1, 'Si'),
 )
 ESTADOS = (
-    ('Sin Estado', 'Sin Estado'),
-    ('Aguascalientes', 'Aguascalientes'),
-    ('Baja California', 'Baja California'),
-    ('Baja California Sur', 'Baja California Sur'),
-    ('Campeche', 'Campeche'),
-    ('Coahuila', 'Coahuila'),
-    ('Colima', 'Colima'),
-    ('Chiapas', 'Chiapas'),
-    ('Chihuahua', 'Chihuahua'),
-    ('Ciudad de México', 'Ciudad de México'),
-    ('Durango', 'Durango'),
-    ('Guanajuato', 'Guanajuato'),
-    ('Guerrero', 'Guerrero'),
-    ('Hidalgo', 'Hidalgo'),
-    ('Jalisco', 'Jalisco'),
-    ('México', 'México'),
-    ('Michoacán', 'Michoacán'),
-    ('Morelos', 'Morelos'),
-    ('Nayarit', 'Nayarit'),
-    ('Nuevo León', 'Nuevo León'),
-    ('Oaxaca', 'Oaxaca'),
-    ('Puebla', 'Puebla'),
-    ('Querétaro', 'Querétaro'),
-    ('Quintana Roo', 'Quintana Roo'),
-    ('San Luis Potosí', 'San Luis Potosí'),
-    ('Sinaloa', 'Sinaloa'),
-    ('Sonora', 'Sonora'),
-    ('Tabasco', 'Tabasco'),
-    ('Tamaulipas', 'Tamaulipas'),
-    ('Tlaxcala', 'Tlaxcala'),
-    ('Veracruz', 'Veracruz'),
-    ('Yucatán', 'Yucatán'),
-    ('Zacatecas', 'Zacatecas'),
+    ('0', 'Sin Estado'),
+    ('1', 'Aguascalientes'),
+    ('2', 'Baja California'),
+    ('3', 'Baja California Sur'),
+    ('4', 'Campeche'),
+    ('5', 'Coahuila'),
+    ('6', 'Colima'),
+    ('7', 'Chiapas'),
+    ('8', 'Chihuahua'),
+    ('9', 'Ciudad de México'),
+    ('10', 'Durango'),
+    ('11', 'Guanajuato'),
+    ('12', 'Guerrero'),
+    ('13', 'Hidalgo'),
+    ('14', 'Jalisco'),
+    ('15', 'México'),
+    ('16', 'Michoacán'),
+    ('17', 'Morelos'),
+    ('18', 'Nayarit'),
+    ('19', 'Nuevo León'),
+    ('20', 'Oaxaca'),
+    ('21', 'Puebla'),
+    ('22', 'Querétaro'),
+    ('23', 'Quintana Roo'),
+    ('24', 'San Luis Potosí'),
+    ('25', 'Sinaloa'),
+    ('26', 'Sonora'),
+    ('27', 'Tabasco'),
+    ('28', 'Tamaulipas'),
+    ('29', 'Tlaxcala'),
+    ('30', 'Veracruz'),
+    ('31', 'Yucatán'),
+    ('32', 'Zacatecas'),
 )
 ESTADOS_NUM = (
     ('Sin Estado', '0'),
@@ -99,6 +99,7 @@ TIPO_ACCION = (
     (0, 'Sin acción'),
     (1, 'Comprar'),
     (2, 'Rentar'),
+    (3, 'Compra o Rentar'),
 )
 TIPO_BIEN = (
     (0, 'Sin tipo'),
@@ -120,17 +121,17 @@ class MensajePicky(models.Model, PermissionRequiredMixin):
     quoted = models.CharField("Quoted", max_length=255, null=True, blank=True)
     estatus_mensaje = models.IntegerField("Estatus del mensaje", choices=ESTATUS_MENSAJE, default=1)
     fecha_alta = models.DateTimeField("Fecha alta", auto_now_add=True)                 # fecha alta
-    opcion0 = models.CharField("Acción", max_length=10, default='0')
-    opcion1 = models.CharField("Opción Bien", max_length=10, default='0')
-    opcion2 = models.CharField("Opción Estado", max_length=10, default='0')
-    opcion2_texto = models.CharField("Opción Estado texto", max_length=40, default=' ', null=True, blank=True)
-    opcion3 = models.CharField("Opción Municipio", max_length=100, default='0')
-    opcion3_texto = models.CharField("Opción Municipio texto", max_length=200, default=' ', null=True, blank=True)
+    nivel = models.IntegerField("Nivel de pregunta", default=1)
+    opcion1 = models.JSONField("Acción", null=True, blank=True)
+    opcion2 = models.JSONField("Bien", null=True, blank=True)
+    opcion3 = models.JSONField("Estado", null=True, blank=True)
+    opcion4 = models.JSONField("Municipio", null=True, blank=True)
+    opcion5 = models.JSONField("Bien seleccionado", null=True, blank=True)
 
     class Meta:
         verbose_name = 'Mensaje picky'
         verbose_name_plural = 'Mensajes picky'
-        ordering = ['id']
+        ordering = ['number','-fecha_alta',]
         db_table = 'MensajePicky'
         
 class Menu(models.Model, PermissionRequiredMixin):
@@ -149,7 +150,7 @@ class Menu(models.Model, PermissionRequiredMixin):
 
 class Prueba(models.Model, PermissionRequiredMixin):
     descripcion = models.CharField("Descripción", max_length=255)
-    fecha = models.TimeField("Fecha", auto_now_add=True)
+    fecha = models.DateTimeField("Fecha", auto_now_add=True)
     
     class Meta:
         verbose_name = 'Dato Prueba'
@@ -166,12 +167,12 @@ class Bien(models.Model, PermissionRequiredMixin):
     colonia = models.CharField("Colonia", max_length=255)
     municipio = models.CharField("Municipio", max_length=255)
     codigo_postal = models.CharField("Código postal", max_length=5)
-    estado = models.CharField("Estado", max_length=35, choices=ESTADOS)
+    estado = models.IntegerField("Estado", choices=ESTADOS, default=0)
     longitud = models.CharField("Longitud", max_length=15, null=True, blank=True)
     latitud = models.CharField("Latitud", max_length=15, null=True, blank=True)
     tipo = models.IntegerField("Tipo bien", choices=TIPO_BIEN, default=0)
-    compra = models.IntegerField("Compra", choices=ACTIVIDAD, default=0)
-    renta = models.IntegerField("Renta", choices=ACTIVIDAD, default=0) 
+    compra_renta = models.IntegerField("Compra y/o renta", choices=TIPO_ACCION, default=0)
+    fecha_alta = models.DateTimeField("Fecha alta", auto_now_add=True, null=True, blank=True)                 # fecha alta
     estatus_bien = models.IntegerField("Estatus", choices=ESTATUS_BIEN, default=1)
 
     class Meta:
@@ -181,5 +182,5 @@ class Bien(models.Model, PermissionRequiredMixin):
         db_table = 'Bien'
     
     def __str__(self):
-        return '%s %s, %s %s, %s, %s, %s, %s, %s' % (self.calle, self.numero, self.colonia, self.codigo_postal, self.municipio, self.estado , self.compra, self.renta, self.tipo)
+        return '%s %s, %s %s, %s, %s, %s, %s' % (self.calle, self.numero, self.colonia, self.codigo_postal, self.municipio, self.estado , self.compra_renta, self.tipo)
     
