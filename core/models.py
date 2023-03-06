@@ -134,20 +134,6 @@ class MensajePicky(models.Model, PermissionRequiredMixin):
         ordering = ['number','-fecha_alta',]
         db_table = 'MensajePicky'
         
-class Menu(models.Model, PermissionRequiredMixin):
-    seleccion = models.IntegerField("Selección")
-    opcion = models.CharField("Opción", max_length=2)              #  opcion 1 menu 2 bienes
-    descripcion = models.CharField("Descripción", max_length=255)
-    
-    class Meta:
-        verbose_name = 'Opción Menú'
-        verbose_name_plural = 'Opciones Menú'
-        ordering = ['seleccion', 'opcion']
-        db_table = 'Menu'
-    
-    def __str__(self):
-        return '%s %s %s %s' % (self.id, self.seleccion, self.opcion, self.descripcion)
-
 class Prueba(models.Model, PermissionRequiredMixin):
     descripcion = models.CharField("Descripción", max_length=255)
     fecha = models.DateTimeField("Fecha", auto_now_add=True)
