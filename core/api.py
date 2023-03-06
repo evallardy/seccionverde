@@ -200,32 +200,12 @@ def existeOpcion(menu_json, opcion_sel):
     return encontro
                 
 def opcionSeleccionada(comunicacion, opcion):
-    if opcion == 1:
-        menu_json = comunicacion.opcion1
-    elif opcion == 2:
-        menu_json = comunicacion.opcion2
-    elif opcion == 3:
-        menu_json = comunicacion.opcion3
-    elif opcion == 4:
-        menu_json = comunicacion.opcion4
-    else:
-        menu_json = comunicacion.opcion5
-    opcion_sel = menu_json
+    opcion_sel = traeJson(comunicacion, opcion)
     seleccion = opcion_sel['seleccion']
     return seleccion
 
 def opcionSeleccionadaT(comunicacion, opcion):
-    if opcion == 1:
-        menu_json = comunicacion.opcion1
-    elif opcion == 2:
-        menu_json = comunicacion.opcion2
-    elif opcion == 3:
-        menu_json = comunicacion.opcion3
-    elif opcion == 4:
-        menu_json = comunicacion.opcion4
-    else:
-        menu_json = comunicacion.opcion5
-    opcion_sel = menu_json
+    opcion_sel = traeJson(comunicacion, opcion)
     seleccion = opcion_sel['seleccion']
     return opcion_sel['opciones'][seleccion]
 
@@ -244,4 +224,3 @@ def mensajeError(numeroTelefono):
     prueba = Prueba(descripcion = "Celular:" + numeroTelefono + "/" + mensaje)
     prueba.save()
     return respuesta
-
